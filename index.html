@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Beeb Recipe Book</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#151923; --muted:#8b93a7; --text:#e8ebf2; --accent:#7dd3fc; --accent2:#a78bfa; --ok:#34d399; --warn:#f59e0b; --danger:#ef4444;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,#0e1014,#0b0d12);color:var(--text);font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial}
+  a{color:var(--accent)}
+  .app{max-width:1100px;margin:0 auto;padding:24px}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .title{font-size:clamp(20px,2.5vw,28px);font-weight:700;letter-spacing:.3px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input[type="text"], input[type="url"], textarea, select{
+    background:#0c0f16;border:1px solid #2a3040;color:var(--text);padding:10px 12px;border-radius:10px;outline:none;width:100%;
+  }
+  textarea{min-height:110px;resize:vertical}
+  .btn{
+    appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:600;color:#0b0d12;background:var(--accent);cursor:pointer;
+  }
+  .btn.secondary{background:#232a3a;color:var(--text);border:1px solid #2a3040}
+  .btn.ghost{background:transparent;color:var(--muted)}
+  .btn.ok{background:var(--ok)}
+  .btn.warn{background:var(--warn)}
+  .btn.danger{background:var(--danger);color:white}
+  .card{
+    background:linear-gradient(180deg,#131826,#0f1320);border:1px solid #262c3b;border-radius:var(--radius);overflow:hidden;
+    transition:transform .08s ease, box-shadow .15s ease;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .thumb{height:150px;background:#0a0d14;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .meta{padding:12px 12px 10px}
+  .rtitle{font-weight:700;margin:0 0 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:12px;color:#b5bed3;background:#20263a;border:1px solid #2a3040;padding:2px 8px;border-radius:999px}
+  .muted{color:var(--muted)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .panel{background:linear-gradient(180deg,#121725,#0e1220);border:1px solid #262c3b;border-radius:var(--radius);padding:14px}
+  .form{display:grid;gap:12px}
+  .small{font-size:12px;color:var(--muted)}
+  .hidden{display:none !important}
+  /* Modal (Book) */
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog{
+    max-width:900px;width:95%;border:1px solid #293046;border-radius:20px;padding:0;background:linear-gradient(180deg,#101625,#0c1120);color:var(--text);
+  }
+  .book{
+    display:grid;grid-template-columns:320px 1fr;gap:0;min-height:520px;
+  }
+  .book-left{border-right:1px solid #262c3b}
+  .cover{height:260px;display:flex;align-items:center;justify-content:center;background:#0a0d14;overflow:hidden}
+  .cover img{width:100%;height:100%;object-fit:cover}
+  .book-body{padding:20px;display:grid;gap:14px}
+  .h1{font-size:22px;font-weight:800}
+  .section{display:grid;gap:8px}
+  .list-dots li{margin-left:18px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #262c3b}
+  .kbd{border:1px solid #2b3142;border-bottom-width:3px;border-radius:8px;padding:2px 6px;color:#c6d0ea;background:#111623;font-size:12px}
+  .empty{padding:48px;text-align:center;color:var(--muted)}
+  .footer{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:8px}
+  .pill{border:1px dashed #36405a;padding:6px 10px;border-radius:999px;color:#b9c4df;font-size:13px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">🐬 Beeb Recipe Book</div>
+      <div class="bar">
+        <input id="search" type="text" placeholder="Search title, tags, ingredients…" />
+        <select id="sort">
+          <option value="date">Sort: Date Added (new→old)</option>
+          <option value="title">Sort: Title (A→Z)</option>
+          <option value="titleZ">Sort: Title (Z→A)</option>
+        </select>
+        <button class="btn secondary" id="btn-export" title="Download your recipes as a JSON backup">Export</button>
+        <label class="btn secondary" for="importFile" title="Import a previously exported JSON file">Import</label>
+        <input id="importFile" type="file" accept="application/json" class="hidden" />
+        <button class="btn" id="btn-new">+ New Recipe</button>
+      </div>
+    </header>
+
+    <!-- Add/Edit Form -->
+    <section id="editor" class="panel hidden" aria-label="Recipe Editor">
+      <form id="recipeForm" class="form">
+        <div class="row">
+          <div>
+            <label>Title</label>
+            <input required id="f_title" type="text" placeholder="e.g., Creamy Garlic Chicken" />
+          </div>
+          <div>
+            <label>Source URL <span class="small">(Original recipe page)</span></label>
+            <input id="f_source" type="url" placeholder="https://example.com/recipe" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Tags <span class="small">(comma-separated: dinner, quick, chicken)</span></label>
+            <input id="f_tags" type="text" placeholder="dinner, quick, chicken" />
+          </div>
+          <div>
+            <label>Photo</label>
+            <input id="f_photo" type="file" accept="image/*" />
+            <div class="small">Large photos are stored as compressed previews to save space.</div>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Ingredients (one per line)</label>
+            <textarea id="f_ingredients" placeholder="- 2 chicken breasts&#10;- 3 cloves garlic"></textarea>
+          </div>
+          <div>
+            <label>Steps (one per line)</label>
+            <textarea id="f_steps" placeholder="1) Season chicken&#10;2) Sear in pan"></textarea>
+          </div>
+        </div>
+        <div>
+          <label>Notes</label>
+          <textarea id="f_notes" placeholder="Personal tweaks, oven temps, substitutions…"></textarea>
+        </div>
+        <div class="footer">
+          <div class="pill"><span class="kbd">Tip</span> Click a card to open it in the Book.</div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn ghost" id="btn-cancel">Cancel</button>
+            <button type="submit" class="btn ok">Save Recipe</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Collection -->
+    <section id="collection" class="grid" aria-live="polite"></section>
+    <div id="emptyState" class="empty hidden">No recipes yet. Click <b>+ New Recipe</b> to add your first! 🍽️</div>
+  </div>
+
+  <!-- Book Modal -->
+  <dialog id="bookModal" aria-label="Recipe Book (Reader)">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="h1" id="bookTitle">Recipe</span>
+        <span id="bookTags" class="tags"></span>
+      </div>
+      <div class="toolbar">
+        <button class="btn secondary" id="bookEdit">Edit</button>
+        <button class="btn warn" id="bookSource">Source</button>
+        <button class="btn danger" id="bookDelete">Delete</button>
+        <button class="btn secondary" id="bookClose">Close</button>
+      </div>
+    </div>
+    <div class="book">
+      <div class="book-left">
+        <div class="cover" id="bookCover"><span class="muted">No Photo</span></div>
+        <div style="padding:14px;border-top:1px solid #262c3b">
+          <div class="small">Added: <span id="bookDate"></span></div>
+        </div>
+      </div>
+      <div class="book-body">
+        <div class="section">
+          <div class="h1">Ingredients</div>
+          <ul id="bookIngredients" class="list-dots"></ul>
+        </div>
+        <div class="section">
+          <div class="h1">Steps</div>
+          <ol id="bookSteps"></ol>
+        </div>
+        <div class="section">
+          <div class="h1">Notes</div>
+          <div id="bookNotes" class="muted"></div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+<script>
+(function(){
+  const el = id => document.getElementById(id);
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const DB_KEY = 'beeb_recipes_v1';
+
+  const ui = {
+    collection: el('collection'),
+    empty: el('emptyState'),
+    editor: el('editor'),
+    form: el('recipeForm'),
+    search: el('search'),
+    sort: el('sort'),
+    btnNew: el('btn-new'),
+    btnCancel: el('btn-cancel'),
+    export: el('btn-export'),
+    importFile: el('importFile'),
+    // form fields
+    f_title: el('f_title'),
+    f_source: el('f_source'),
+    f_tags: el('f_tags'),
+    f_photo: el('f_photo'),
+    f_ingredients: el('f_ingredients'),
+    f_steps: el('f_steps'),
+    f_notes: el('f_notes'),
+    // book
+    modal: el('bookModal'),
+    bookTitle: el('bookTitle'),
+    bookTags: el('bookTags'),
+    bookCover: el('bookCover'),
+    bookDate: el('bookDate'),
+    bookIngredients: el('bookIngredients'),
+    bookSteps: el('bookSteps'),
+    bookNotes: el('bookNotes'),
+    bookEdit: el('bookEdit'),
+    bookDelete: el('bookDelete'),
+    bookSource: el('bookSource'),
+    bookClose: el('bookClose'),
+  };
+
+  /** ------- Data Layer ------- */
+  let state = {
+    recipes: loadDB(),
+    editingId: null,
+    viewingId: null,
+    query: '',
+    sort: 'date',
+  };
+
+  function loadDB(){
+    try{
+      const raw = localStorage.getItem(DB_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ console.warn('DB parse error', e); return []; }
+  }
+  function saveDB(){ localStorage.setItem(DB_KEY, JSON.stringify(state.recipes)); }
+
+  function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+  function upsert(recipe){
+    const i = state.recipes.findIndex(r=>r.id===recipe.id);
+    if(i>=0) state.recipes[i]=recipe; else state.recipes.unshift(recipe);
+    saveDB(); render();
+  }
+  function remove(id){
+    state.recipes = state.recipes.filter(r=>r.id!==id);
+    saveDB(); render();
+  }
+  function byId(id){ return state.recipes.find(r=>r.id===id) || null; }
+
+  /** ------- Image compress to dataURL ------- */
+  async function fileToDataURL(file, maxW=1200, maxH=1200, quality=0.8){
+    if(!file) return null;
+    const img = new Image();
+    const reader = new FileReader();
+    const load = new Promise(res => reader.onload = () => res(reader.result));
+    reader.readAsDataURL(file);
+    const dataURL = await load;
+    await new Promise(res=>{ img.onload=res; img.src=dataURL; });
+    const w = img.naturalWidth, h = img.naturalHeight;
+    let [nw, nh] = [w, h];
+    const ratio = Math.min(maxW/w, maxH/h, 1);
+    nw = Math.round(w*ratio); nh = Math.round(h*ratio);
+    const cvs = document.createElement('canvas'); cvs.width=nw; cvs.height=nh;
+    const ctx = cvs.getContext('2d'); ctx.drawImage(img,0,0,nw,nh);
+    return cvs.toDataURL('image/jpeg', quality);
+  }
+
+  /** ------- Render ------- */
+  function render(){
+    // filter + sort
+    const q = state.query.trim().toLowerCase();
+    let list = state.recipes.filter(r=>{
+      if(!q) return true;
+      const hay = [
+        r.title, r.notes, (r.tags||[]).join(' '),
+        (r.ingredients||[]).join(' '),
+        (r.steps||[]).join(' ')
+      ].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+    list.sort((a,b)=>{
+      if(state.sort==='title') return a.title.localeCompare(b.title);
+      if(state.sort==='titleZ') return b.title.localeCompare(a.title);
+      return new Date(b.createdAt) - new Date(a.createdAt); // date
+    });
+
+    ui.collection.innerHTML='';
+    if(!list.length){ ui.empty.classList.remove('hidden'); }
+    else { ui.empty.classList.add('hidden'); }
+
+    for(const r of list){
+      const card = document.createElement('article');
+      card.className='card';
+      card.tabIndex=0;
+      card.setAttribute('role','button');
+      card.setAttribute('aria-label', `Open ${r.title}`);
+      card.innerHTML = `
+        <div class="thumb">${r.photo ? `<img alt="" src="${r.photo}">` : `<span class="muted">No Photo</span>`}</div>
+        <div class="meta">
+          <div class="rtitle">${escapeHTML(r.title)}</div>
+          <div class="tags">${(r.tags||[]).slice(0,4).map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
+          <div class="small muted" style="margin-top:6px">${new Date(r.createdAt).toLocaleString()}</div>
+        </div>
+      `;
+      card.addEventListener('click', ()=>openBook(r.id));
+      card.addEventListener('keypress', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openBook(r.id); }});
+      ui.collection.appendChild(card);
+    }
+  }
+
+  /** ------- Editor show/hide ------- */
+  function toggleEditor(show){
+    ui.editor.classList.toggle('hidden', !show);
+    if(show){ ui.editor.scrollIntoView({behavior:'smooth', block:'start'}); }
+    else { ui.form.reset(); state.editingId=null; }
+  }
+
+  ui.btnNew.addEventListener('click', ()=>{
+    state.editingId = null;
+    ui.form.reset();
+    toggleEditor(true);
+    ui.f_title.focus();
+  });
+
+  ui.btnCancel.addEventListener('click', ()=>toggleEditor(false));
+
+  ui.form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const title = ui.f_title.value.trim();
+    if(!title) return alert('Please enter a title.');
+    const src = ui.f_source.value.trim();
+    const tags = ui.f_tags.value.split(',').map(s=>s.trim()).filter(Boolean);
+    const ingredients = splitLines(ui.f_ingredients.value);
+    const steps = splitLines(ui.f_steps.value);
+    const notes = ui.f_notes.value;
+    let photoData = null;
+    if(ui.f_photo.files && ui.f_photo.files[0]){
+      photoData = await fileToDataURL(ui.f_photo.files[0]);
+    }
+
+    const now = new Date().toISOString();
+    const rec = {
+      id: state.editingId || uid(),
+      title, source: src||'',
+      tags, ingredients, steps, notes,
+      photo: photoData ?? (state.editingId ? (byId(state.editingId)?.photo||null) : null),
+      createdAt: state.editingId ? (byId(state.editingId).createdAt) : now,
+      updatedAt: now
+    };
+    upsert(rec);
+    toggleEditor(false);
+  });
+
+  /** ------- Search / Sort ------- */
+  ui.search.addEventListener('input', (e)=>{ state.query = e.target.value; render(); });
+  ui.sort.addEventListener('change', (e)=>{ state.sort = e.target.value; render(); });
+
+  /** ------- Export / Import ------- */
+  ui.export.addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state.recipes,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'beeb_recipe_book_backup.json';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  });
+
+  ui.importFile.addEventListener('change', async (e)=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!Array.isArray(data)) throw new Error('Invalid file');
+      // Merge by id (avoid duplicates)
+      const map = new Map(state.recipes.map(r=>[r.id,r]));
+      for(const r of data){ map.set(r.id, r); }
+      state.recipes = [...map.values()];
+      saveDB(); render();
+      alert('Import complete!');
+    }catch(err){
+      alert('Import failed: ' + err.message);
+    }finally{
+      ui.importFile.value='';
+    }
+  });
+
+  /** ------- Book (Reader) ------- */
+  function openBook(id){
+    const r = byId(id); if(!r) return;
+    state.viewingId = id;
+    ui.bookTitle.textContent = r.title || 'Recipe';
+    ui.bookTags.innerHTML = (r.tags||[]).map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('');
+    ui.bookDate.textContent = new Date(r.createdAt).toLocaleString();
+    ui.bookIngredients.innerHTML = (r.ingredients||[]).map(li=>`<li>${escapeHTML(li)}</li>`).join('') || `<span class="muted">No ingredients listed.</span>`;
+    ui.bookSteps.innerHTML = (r.steps||[]).map(step=>`<li>${escapeHTML(step)}</li>`).join('') || `<span class="muted">No steps listed.</span>`;
+    ui.bookNotes.innerHTML = r.notes ? nl2br(escapeHTML(r.notes)) : '<span class="muted">No notes.</span>';
+    ui.bookCover.innerHTML = r.photo ? `<img alt="Recipe photo">` : `<span class="muted">No Photo</span>`;
+    if(r.photo){ ui.bookCover.querySelector('img').src = r.photo; }
+    ui.modal.showModal();
+  }
+  ui.bookClose.addEventListener('click', ()=>ui.modal.close());
+  ui.modal.addEventListener('click', (e)=>{ // click outside sheet closes
+    const rect = ui.modal.getBoundingClientRect();
+    const within = e.clientY >= rect.top && e.clientY <= rect.bottom && e.clientX >= rect.left && e.clientX <= rect.right;
+    if(!within) ui.modal.close();
+  });
+  ui.bookEdit.addEventListener('click', ()=>{
+    const r = byId(state.viewingId); if(!r) return;
+    toggleEditor(true);
+    state.editingId = r.id;
+    ui.f_title.value = r.title||'';
+    ui.f_source.value = r.source||'';
+    ui.f_tags.value = (r.tags||[]).join(', ');
+    ui.f_ingredients.value = (r.ingredients||[]).join('\n');
+    ui.f_steps.value = (r.steps||[]).join('\n');
+    ui.f_notes.value = r.notes||'';
+    ui.modal.close();
+  });
+  ui.bookDelete.addEventListener('click', ()=>{
+    const r = byId(state.viewingId); if(!r) return;
+    if(confirm(`Delete “${r.title}”? This cannot be undone.`)){
+      remove(r.id);
+      ui.modal.close();
+    }
+  });
+  ui.bookSource.addEventListener('click', ()=>{
+    const r = byId(state.viewingId); if(!r) return;
+    if(r.source){
+      window.open(r.source, '_blank', 'noopener');
+    }else{
+      alert('No Source URL saved for this recipe.');
+    }
+  });
+
+  /** ------- Helpers ------- */
+  function splitLines(text){
+    return (text||'')
+      .split(/\r?\n/)
+      .map(s=>s.replace(/^\s*[-*\d.)\s]?/, '').trim())
+      .filter(Boolean);
+  }
+  function escapeHTML(s){ return (s??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  function nl2br(s){ return s.replace(/\n/g,'<br>'); }
+
+  // initial UI
+  render();
+})();
+</script>
+</body>
+</html>
