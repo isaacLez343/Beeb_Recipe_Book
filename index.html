@@ -301,15 +301,15 @@
       card.className='card';
       card.tabIndex=0;
       card.setAttribute('role','button');
-      card.setAttribute('aria-label', Open ${r.title});
-      card.innerHTML = 
-        <div class="thumb">${r.photo ? <img alt="" src="${r.photo}"> : <span class="muted">No Photo</span>}</div>
+      card.setAttribute('aria-label', `Open ${r.title}`);
+      card.innerHTML = `
+        <div class="thumb">${r.photo ? `<img alt="" src="${r.photo}">` : `<span class="muted">No Photo</span>`}</div>
         <div class="meta">
           <div class="rtitle">${escapeHTML(r.title)}</div>
-          <div class="tags">${(r.tags||[]).slice(0,4).map(t=><span class="tag">${escapeHTML(t)}</span>).join('')}</div>
+          <div class="tags">${(r.tags||[]).slice(0,4).map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
           <div class="small muted" style="margin-top:6px">${new Date(r.createdAt).toLocaleString()}</div>
         </div>
-      ;
+      `;
       card.addEventListener('click', ()=>openBook(r.id));
       card.addEventListener('keypress', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openBook(r.id); }});
       ui.collection.appendChild(card);
@@ -401,12 +401,12 @@
     const r = byId(id); if(!r) return;
     state.viewingId = id;
     ui.bookTitle.textContent = r.title || 'Recipe';
-    ui.bookTags.innerHTML = (r.tags||[]).map(t=><span class="tag">${escapeHTML(t)}</span>).join('');
+    ui.bookTags.innerHTML = (r.tags||[]).map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('');
     ui.bookDate.textContent = new Date(r.createdAt).toLocaleString();
-    ui.bookIngredients.innerHTML = (r.ingredients||[]).map(li=><li>${escapeHTML(li)}</li>).join('') || <span class="muted">No ingredients listed.</span>;
-    ui.bookSteps.innerHTML = (r.steps||[]).map(step=><li>${escapeHTML(step)}</li>).join('') || <span class="muted">No steps listed.</span>;
+    ui.bookIngredients.innerHTML = (r.ingredients||[]).map(li=>`<li>${escapeHTML(li)}</li>`).join('') || `<span class="muted">No ingredients listed.</span>`;
+    ui.bookSteps.innerHTML = (r.steps||[]).map(step=>`<li>${escapeHTML(step)}</li>`).join('') || `<span class="muted">No steps listed.</span>`;
     ui.bookNotes.innerHTML = r.notes ? nl2br(escapeHTML(r.notes)) : '<span class="muted">No notes.</span>';
-    ui.bookCover.innerHTML = r.photo ? <img alt="Recipe photo"> : <span class="muted">No Photo</span>;
+    ui.bookCover.innerHTML = r.photo ? `<img alt="Recipe photo">` : `<span class="muted">No Photo</span>`;
     if(r.photo){ ui.bookCover.querySelector('img').src = r.photo; }
     ui.modal.showModal();
   }
@@ -430,7 +430,7 @@
   });
   ui.bookDelete.addEventListener('click', ()=>{
     const r = byId(state.viewingId); if(!r) return;
-    if(confirm(Delete “${r.title}”? This cannot be undone.)){
+    if(confirm(`Delete “${r.title}”? This cannot be undone.`)){
       remove(r.id);
       ui.modal.close();
     }
