@@ -155,6 +155,8 @@
       <div class="toolbar">
         <button class="btn secondary" id="bookEdit">Edit</button>
         <button class="btn warn" id="bookSource">Source</button>
+        <!-- NEW: Print button -->
+        <button class="btn secondary" id="bookPrint">Print</button>
         <button class="btn danger" id="bookDelete">Delete</button>
         <button class="btn secondary" id="bookClose">Close</button>
       </div>
@@ -201,7 +203,7 @@
     btnCancel: el('btn-cancel'),
     export: el('btn-export'),
     importFile: el('importFile'),
-    importBtn: el('btn-import'),   // <-- NEW: map the import button
+    importBtn: el('btn-import'),   // <-- existing map
     // form fields
     f_title: el('f_title'),
     f_source: el('f_source'),
@@ -223,6 +225,7 @@
     bookDelete: el('bookDelete'),
     bookSource: el('bookSource'),
     bookClose: el('bookClose'),
+    bookPrint: el('bookPrint'),    // <-- NEW map
   };
 
   /** ------- Data Layer ------- */
@@ -373,7 +376,7 @@
     setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
   });
 
-  // NEW: clicking the Import button opens the hidden file input
+  // clicking the Import button opens the hidden file input
   ui.importBtn.addEventListener('click', ()=> ui.importFile.click());
 
   ui.importFile.addEventListener('change', async (e)=>{
@@ -444,6 +447,85 @@
     }
   });
 
+  // NEW: Print current recipe
+  ui.bookPrint.addEventListener('click', ()=>{
+    const r = byId(state.viewingId);
+    if(!r) return;
+    const html = buildPrintHTML(r);
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
+    if(!w){ alert('Popup blocked. Please allow popups to print.'); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  });
+
+  // Build a clean printable document (new window)
+  function buildPrintHTML(r){
+    const esc = escapeHTML;
+    const date = new Date(r.createdAt).toLocaleString();
+    const tags = (r.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join(' ');
+    const ingredients = (r.ingredients||[]).map(i=>`<li>${esc(i)}</li>`).join('') || '<li><em>None listed</em></li>';
+    const steps = (r.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('') || '<li><em>None listed</em></li>';
+    const notes = r.notes ? esc(r.notes).replace(/\n/g,'<br>') : '<em>None</em>';
+    const src = r.source ? `<div class="src">Source: <a href="${esc(r.source)}" target="_blank" rel="noopener">${esc(r.source)}</a></div>` : '';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Print – ${esc(r.title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @page { margin: 20mm; }
+  body{ font:14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color:#111; background:#fff; }
+  .wrap{ max-width:780px; margin:0 auto; }
+  h1{ font-size:28px; margin:0 0 6px; }
+  .meta{ color:#555; margin-bottom:14px; display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+  .chip{ display:inline-block; border:1px solid #ccc; border-radius:999px; padding:2px 8px; font-size:12px; }
+  .cover{ margin:14px 0; }
+  .cover img{ max-width:100%; height:auto; border-radius:8px; }
+  h2{ font-size:18px; margin:18px 0 8px; border-bottom:1px solid #ddd; padding-bottom:4px; }
+  ul,ol{ padding-left:20px; margin:8px 0; }
+  .notes{ white-space:normal; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .src{ margin-top:8px; word-break:break-all }
+  .footer{ margin-top:22px; font-size:12px; color:#666; display:flex; justify-content:space-between }
+  @media print { a { color: inherit; text-decoration: none; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>${esc(r.title)}</h1>
+    <div class="meta">
+      <div>Added: ${esc(date)}</div>
+      ${tags ? `<div>• ${tags}</div>` : ''}
+    </div>
+    ${r.photo ? `<div class="cover"><img src="${r.photo}" alt="Photo of ${esc(r.title)}"></div>` : ''}
+    <div class="grid">
+      <section>
+        <h2>Ingredients</h2>
+        <ul>${ingredients}</ul>
+      </section>
+      <section>
+        <h2>Steps</h2>
+        <ol>${steps}</ol>
+      </section>
+    </div>
+    <section>
+      <h2>Notes</h2>
+      <div class="notes">${notes}</div>
+      ${src}
+    </section>
+    <div class="footer">
+      <div>Beeb Recipe Book</div>
+      <div>Printed on ${esc(new Date().toLocaleString())}</div>
+    </div>
+  </div>
+  <script>window.addEventListener('load',()=>setTimeout(()=>{try{window.print()}catch(e){}},200));</script>
+</body>
+</html>`;
+  }
+
   /** ------- Helpers ------- */
   function splitLines(text){
     return (text||'')
@@ -460,4 +542,3 @@
 </script>
 </body>
 </html>
-
