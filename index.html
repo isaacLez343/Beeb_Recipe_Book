@@ -26,7 +26,7 @@
     appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:600;color:#0b0d12;background:var(--accent);cursor:pointer;
   }
   .btn.secondary{background:#232a3a;color:var(--text);border:1px solid #2a3040}
-  .btn.ghost{background:transparent;color:#var(--muted)}
+  .btn.ghost{background:transparent;color:var(--muted)}
   .btn.ok{background:var(--ok)}
   .btn.warn{background:var(--warn)}
   .btn.danger{background:var(--danger);color:white}
@@ -83,8 +83,11 @@
           <option value="titleZ">Sort: Title (Z→A)</option>
         </select>
         <button class="btn secondary" id="btn-export" title="Download your recipes as a JSON backup">Export</button>
+
+        <!-- IMPORT: changed from <label> to a real <button> -->
         <button class="btn secondary" id="btn-import" type="button" title="Import a previously exported JSON file">Import</button>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
+
         <button class="btn" id="btn-new">+ New Recipe</button>
       </div>
     </header>
@@ -152,8 +155,6 @@
       <div class="toolbar">
         <button class="btn secondary" id="bookEdit">Edit</button>
         <button class="btn warn" id="bookSource">Source</button>
-        <!-- NEW: Print button -->
-        <button class="btn secondary" id="bookPrint">Print</button>
         <button class="btn danger" id="bookDelete">Delete</button>
         <button class="btn secondary" id="bookClose">Close</button>
       </div>
@@ -200,7 +201,7 @@
     btnCancel: el('btn-cancel'),
     export: el('btn-export'),
     importFile: el('importFile'),
-    importBtn: el('btn-import'),
+    importBtn: el('btn-import'),   // <-- NEW: map the import button
     // form fields
     f_title: el('f_title'),
     f_source: el('f_source'),
@@ -222,7 +223,6 @@
     bookDelete: el('bookDelete'),
     bookSource: el('bookSource'),
     bookClose: el('bookClose'),
-    bookPrint: el('bookPrint'), // NEW
   };
 
   /** ------- Data Layer ------- */
@@ -373,6 +373,7 @@
     setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
   });
 
+  // NEW: clicking the Import button opens the hidden file input
   ui.importBtn.addEventListener('click', ()=> ui.importFile.click());
 
   ui.importFile.addEventListener('change', async (e)=>{
@@ -443,50 +444,20 @@
     }
   });
 
-  // NEW: Print handler
-  ui.bookPrint.addEventListener('click', ()=>{
-    const r = byId(state.viewingId);
-    if(!r) return;
-    const html = buildPrintHTML(r);
-    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
-    if(!w){ alert('Popup blocked. Please allow popups to print.'); return; }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-  });
-
-  // Build a clean, printable HTML document for a single recipe
-  function buildPrintHTML(r){
-    const esc = escapeHTML;
-    const date = new Date(r.createdAt).toLocaleString();
-    const tags = (r.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join(' ');
-    const ingredients = (r.ingredients||[]).map(i=>`<li>${esc(i)}</li>`).join('') || '<li><em>None listed</em></li>';
-    const steps = (r.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('') || '<li><em>None listed</em></li>';
-    const notes = r.notes ? esc(r.notes).replace(/\n/g,'<br>') : '<em>None</em>';
-    const src = r.source ? `<div class="src">Source: <span>${esc(r.source)}</span></div>` : '';
-
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Print – ${esc(r.title)}</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  @page { margin: 20mm; }
-  body{
-    font:14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
-    color:#111; background:white;
+  /** ------- Helpers ------- */
+  function splitLines(text){
+    return (text||'')
+      .split(/\r?\n/)
+      .map(s=>s.replace(/^\s*[-*\d.)\s]?/, '').trim())
+      .filter(Boolean);
   }
-  .wrap{ max-width:780px; margin:0 auto; }
-  h1{ font-size:28px; margin:0 0 6px; }
-  .meta{ color:#555; margin-bottom:14px; display:flex; flex-wrap:wrap; gap:8px; align-items:center }
-  .chip{ display:inline-block; border:1px solid #ccc; border-radius:999px; padding:2px 8px; font-size:12px; }
-  .cover{ margin:14px 0; }
-  .cover img{ max-width:100%; height:auto; border-radius:8px; }
-  h2{ font-size:18px; margin:18px 0 8px; border-bottom:1px solid #ddd; padding-bottom:4px; }
-  ul,ol{ padding-left:20px; margin:8px 0; }
-  .notes{ white-space:normal; }
-  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-  .src{ margin-top:8px; color:#333; word-break:break-all }
-  .footer{ margin-top:22px; font-size:12px; co
+  function escapeHTML(s){ return (s??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  function nl2br(s){ return s.replace(/\n/g,'<br>'); }
+
+  // initial UI
+  render();
+})();
+</script>
+</body>
+</html>
+
