@@ -71,7 +71,7 @@
   .pill{border:1px dashed #36405a;padding:6px 10px;border-radius:999px;color:#b9c4df;font-size:13px}
 
   /* === Responsive (mobile-first) additions === */
-  /* Prevent iOS zoom on focus by keeping controls >=16px (overridden on mobile per request) */
+  /* Keep default control font-size at 16px (prevents iOS zoom) */
   input[type="text"], input[type="url"], textarea, select, .btn { font-size:16px; }
 
   /* Let header controls wrap neatly; avoid overflow */
@@ -85,27 +85,34 @@
     .book{grid-template-columns:260px 1fr}
   }
 
-  /* Phones: vertical layout */
+  /* Phones: vertical layout with compact toolbar */
   @media (max-width: 640px){
     body{font-size:15px}
     .app{padding:12px}
     header{flex-direction:column;align-items:stretch;gap:10px}
     .title{text-align:center}
-    .bar{flex-direction:column;align-items:stretch;gap:8px}
+    .bar{flex-direction:column;align-items:stretch;gap:6px} /* tighter gap */
     .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
     .thumb{height:120px}
     .row{grid-template-columns:1fr}            /* form stacks to single column */
     .footer{flex-direction:column;gap:10px}    /* editor footer stacks */
     .pill{text-align:center}
 
-    /* Compact toolbar controls on mobile */
+    /* Smaller HIT BOXES on mobile (text stays 16px) */
     .bar input[type="text"],
-    .bar select,
+    .bar select {
+      width:100%;
+      padding:4px 8px;         /* tighter vertical padding */
+      min-height:30px;         /* compact hit box */
+      line-height:1.1;
+      border-radius:8px;       /* slightly tighter corners */
+    }
     .bar button {
       width:100%;
-      font-size:12px;
-      padding:4px 8px;
-      line-height:1.2;
+      padding:4px 10px;        /* tighter vertical padding */
+      min-height:30px;         /* compact hit box */
+      line-height:1.1;
+      border-radius:8px;
     }
 
     /* Dialog becomes full-viewport mobile sheet */
