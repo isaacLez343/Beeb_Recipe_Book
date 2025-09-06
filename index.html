@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -83,8 +83,11 @@
           <option value="titleZ">Sort: Title (Z→A)</option>
         </select>
         <button class="btn secondary" id="btn-export" title="Download your recipes as a JSON backup">Export</button>
-        <label class="btn secondary" for="importFile" title="Import a previously exported JSON file">Import</label>
+
+        <!-- IMPORT: changed from <label> to a real <button> -->
+        <button class="btn secondary" id="btn-import" type="button" title="Import a previously exported JSON file">Import</button>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
+
         <button class="btn" id="btn-new">+ New Recipe</button>
       </div>
     </header>
@@ -198,6 +201,7 @@
     btnCancel: el('btn-cancel'),
     export: el('btn-export'),
     importFile: el('importFile'),
+    importBtn: el('btn-import'),   // <-- NEW: map the import button
     // form fields
     f_title: el('f_title'),
     f_source: el('f_source'),
@@ -368,6 +372,9 @@
     a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
   });
+
+  // NEW: clicking the Import button opens the hidden file input
+  ui.importBtn.addEventListener('click', ()=> ui.importFile.click());
 
   ui.importFile.addEventListener('change', async (e)=>{
     const file = e.target.files?.[0];
